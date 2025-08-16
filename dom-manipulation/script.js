@@ -29,7 +29,6 @@ function loadQuotes() {
 function nowIso() {
   return new Date().toISOString();
 }
-// Deterministic ID from normalized text (stable across devices)
 function makeIdFromText(text) {
   return text.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "").slice(0, 64) || cryptoRandomId();
 }
@@ -177,7 +176,6 @@ function createAddQuoteForm() {
       return;
     }
     const q = normalizeQuote(text, category, "local");
-    // If an item with same id exists locally, update it (local edit)
     const i = quotes.findIndex(x => x.id === q.id);
     if (i >= 0) {
       quotes[i] = { ...q, updatedAt: nowIso() };
@@ -190,6 +188,9 @@ function createAddQuoteForm() {
     form.reset();
     populateCategories();
     showRandomQuote();
+
+    // NEW: post to server as well
+    postQuoteToServer(q);
   });
 }
 
@@ -213,7 +214,6 @@ function importFromJsonFile(event) {
       const imported = JSON.parse(e.target.result);
       if (!Array.isArray(imported)) return alert("Invalid JSON format.");
       const normalized = imported.map(q => normalizeQuote(q.text || q.quote || "", q.category || q.author || "Imported", "local"));
-      // Merge by id (local wins because it's an explicit import)
       normalized.forEach(n => {
         const i = quotes.findIndex(x => x.id === n.id);
         if (i >= 0) quotes[i] = { ...n, updatedAt: nowIso() };
@@ -232,9 +232,7 @@ function importFromJsonFile(event) {
 // ==============================
 // Server Sync (Simulation)
 // ==============================
-// Fetch server quotes from a mock API and normalize to our schema
 async function fetchQuotesFromServer() {
-  // Using DummyJSON (public mock). Map author→category; attach source=server
   const url = "https://jsonplaceholder.typicode.com/posts";
   const res = await fetch(url);
   if (!res.ok) throw new Error("Server fetch failed");
@@ -243,34 +241,50 @@ async function fetchQuotesFromServer() {
   return list.map(item => {
     const text = item.quote || "";
     const category = item.author || "Server";
-    const q = normalizeQuote(text, category, "server");
-    return q;
+    return normalizeQuote(text, category, "server");
   });
 }
 
-// Merge server list into local, detect conflicts.
-// Conflict definition: same id exists AND (text OR category differs).
+// NEW: Post data to server
+async function postQuoteToServer(quote) {
+  try {
+    const res = await fetch("https://jsonplaceholder.typicode.com/posts/add", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        quote: quote.text,
+        author: quote.category
+      })
+    });
+    if (!res.ok) throw new Error("Failed to post quote");
+    const data = await res.json();
+    notify(`Quote posted to server (id: ${data.id}).`, "info");
+    return data;
+  } catch (err) {
+    notify("Error posting quote to server.", "warn");
+  }
+}
+
 function mergeWithConflicts(serverList) {
   const newConflicts = [];
   const localMap = new Map(quotes.map(q => [q.id, q]));
   serverList.forEach(sq => {
     const lq = localMap.get(sq.id);
     if (!lq) {
-      // New server item → add
       localMap.set(sq.id, sq);
     } else {
       const differs = lq.text !== sq.text || lq.category !== sq.category;
       if (differs) {
-        // server-wins default
         newConflicts.push({
           id: sq.id,
           local: lq,
           server: sq,
           choice: "server"
         });
-        localMap.set(sq.id, sq); // default application
+        localMap.set(sq.id, sq);
       } else {
-        // Same content: keep the most recent updatedAt (cosmetic)
         const newer = new Date(lq.updatedAt) > new Date(sq.updatedAt) ? lq : sq;
         localMap.set(sq.id, newer);
       }
@@ -297,12 +311,10 @@ async function syncNow() {
     notify("Sync failed. Check your network and try again.", "warn");
     setSyncStatus("Error");
   } finally {
-    // Return to Idle after a moment
     setTimeout(() => setSyncStatus("Idle"), 1500);
   }
 }
 
-// Keep any previously unresolved conflicts, update/append new ones by id
 function mergeConflictQueues(existing, incoming) {
   const map = new Map(existing.map(c => [c.id, c]));
   incoming.forEach(c => {
@@ -314,8 +326,6 @@ function mergeConflictQueues(existing, incoming) {
   });
   return Array.from(map.values());
 }
-
-// Periodic sync (every 30s)
 function startAutoSync() {
   if (syncTimer) clearInterval(syncTimer);
   syncTimer = setInterval(() => {
@@ -437,7 +447,6 @@ document.getElementById("closeConflictsBtn").addEventListener("click", closeConf
 loadQuotes();
 createAddQuoteForm();
 populateCategories();
-// Restore last viewed
 const lastQuote = sessionStorage.getItem("lastQuote");
 if (lastQuote) {
   const { text, category } = JSON.parse(lastQuote);
