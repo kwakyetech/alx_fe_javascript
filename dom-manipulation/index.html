@@ -16,13 +16,34 @@
         <select id="categoryFilter"></select>
 
         <div id="quoteDisplay">Click “Show Random Quote” to begin.</div>
-        <button id="randomBtn" type="button">Show Random Quote</button>
-        
+
+        <div class="toolbar">
+            <button id="randomBtn" type="button">Show Random Quote</button>
+            <button id="syncNowBtn" type="button" title="Fetch from server and merge">Sync Now</button>
+            <span class="badge" id="syncStatus">Idle</span>
+        </div>
+
         <!-- Export & Import controls -->
-        <button id="exportBtn" type="button">Export Quotes (JSON)</button>
-        <input type="file" id="importFile" accept=".json" />
+        <div class="toolbar">
+            <button id="exportBtn" type="button">Export Quotes (JSON)</button>
+            <input type="file" id="importFile" accept=".json" />
+            <button id="viewConflictsBtn" type="button" title="Manually resolve detected conflicts">View Conflicts</button>
+        </div>
+
+        <div id="notifications" aria-live="polite"></div>
+
+        <!-- Conflicts Panel -->
+        <div id="conflictsPanel" class="conflicts-panel" aria-hidden="true">
+            <h2>Resolve Conflicts</h2>
+            <p class="muted">Conflicts occur when the same quote exists locally and on the server with different content. Choose which version to keep.</p>
+            <div id="conflictsList"></div>
+            <div class="toolbar">
+                <button id="applyResolutionsBtn" type="button">Apply Resolutions</button>
+                <button id="closeConflictsBtn" type="button">Close</button>
+            </div>
+        </div>
 
         <div id="addQuoteForm"></div>
-    </div> 
+    </div>
 </body>
 </html>
