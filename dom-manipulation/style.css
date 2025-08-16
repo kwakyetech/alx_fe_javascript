@@ -1,0 +1,48 @@
+:root {
+    font-family: system-ui, Arial, sans-serif;
+}
+body {
+    margin: 24px;
+}
+#app {
+    max-width: 720px;
+    margin-inline: auto;
+}
+#quoteDisplay { 
+    margin: 16px 0;
+    padding: 12px 14px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-style: italic; 
+}
+form {
+    display: grid;
+    gap: 10px;
+    margin-top: 16px;
+}
+label {
+    font-weight: 600; 
+}
+
+input, textarea, select, button {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+button {
+    cursor: pointer;
+}
+.row {
+    display: grid;
+    gap: 6px;
+}
+.muted {
+    color: #666;
+    font-size: 0.9rem;
+}
+.success {
+    color: #0a7a37;
+}
+.error {
+    color: #b00020;
+}
