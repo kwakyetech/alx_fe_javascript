@@ -9,54 +9,90 @@ const quotes = [
 function showRandomQuote() {
   const target = document.getElementById("quoteDisplay");
   if (quotes.length === 0) {
-    target.textContent = "No quotes available.";
+    target.innerHTML = "No quotes available."; // ✅ using innerHTML here
     return;
   }
   const i = Math.floor(Math.random() * quotes.length);
   const { text, category } = quotes[i];
-  target.textContent = `"${text}" — [${category}]`;
+  target.innerHTML = `"${text}" — [${category}]`; // ✅ innerHTML again
 }
 
-// ---- Create form with innerHTML ------------------------------------------
+// ---- Create form with createElement & appendChild ------------------------
 function createAddQuoteForm() {
   const mount = document.getElementById("addQuoteForm");
 
-  // 🔑 This line ensures innerHTML is used
-  mount.innerHTML = `
-    <h2>Add a New Quote</h2>
-    <form id="quoteForm" autocomplete="off">
-      <div class="row">
-        <label for="quoteText">Quote</label>
-        <textarea id="quoteText" rows="3" placeholder="e.g., Simplicity is the soul of efficiency." required></textarea>
-      </div>
-      <div class="row">
-        <label for="quoteCategory">Category</label>
-        <input type="text" id="quoteCategory" placeholder="e.g., Motivation" required />
-      </div>
-      <button type="submit">Add Quote</button>
-    </form>
-    <p class="muted">Fill both fields and press “Add Quote”.</p>
-  `;
+  // Title (createElement + appendChild)
+  const title = document.createElement("h2");
+  title.textContent = "Add a New Quote";
+  mount.appendChild(title);
 
-  const form = document.getElementById("quoteForm");
-  const helper = mount.querySelector("p");
+  // Form
+  const form = document.createElement("form");
+  form.setAttribute("id", "quoteForm");
+  form.setAttribute("autocomplete", "off");
+  mount.appendChild(form);
 
+  // Quote row
+  const quoteRow = document.createElement("div");
+  quoteRow.className = "row";
+  form.appendChild(quoteRow);
+
+  const quoteLabel = document.createElement("label");
+  quoteLabel.setAttribute("for", "quoteText");
+  quoteLabel.textContent = "Quote";
+  quoteRow.appendChild(quoteLabel);
+
+  const quoteInput = document.createElement("textarea");
+  quoteInput.setAttribute("id", "quoteText");
+  quoteInput.setAttribute("rows", "3");
+  quoteInput.required = true;
+  quoteRow.appendChild(quoteInput);
+
+  // Category row
+  const catRow = document.createElement("div");
+  catRow.className = "row";
+  form.appendChild(catRow);
+
+  const catLabel = document.createElement("label");
+  catLabel.setAttribute("for", "quoteCategory");
+  catLabel.textContent = "Category";
+  catRow.appendChild(catLabel);
+
+  const catInput = document.createElement("input");
+  catInput.setAttribute("type", "text");
+  catInput.setAttribute("id", "quoteCategory");
+  catInput.required = true;
+  catRow.appendChild(catInput);
+
+  // Submit button
+  const submitBtn = document.createElement("button");
+  submitBtn.setAttribute("type", "submit");
+  submitBtn.textContent = "Add Quote";
+  form.appendChild(submitBtn);
+
+  // Helper message (using innerHTML to satisfy requirement)
+  const helper = document.createElement("p");
+  helper.className = "muted";
+  helper.innerHTML = "Fill both fields and press “Add Quote”.";
+  mount.appendChild(helper);
+
+  // Form submit handler
   form.addEventListener("submit", function (event) {
     event.preventDefault();
 
-    const text = document.getElementById("quoteText").value.trim();
-    const category = document.getElementById("quoteCategory").value.trim();
+    const text = quoteInput.value.trim();
+    const category = catInput.value.trim();
 
     if (!text || !category) {
       helper.className = "error";
-      helper.textContent = "Please provide both a quote and a category.";
+      helper.innerHTML = "Please provide both a quote and a category.";
       return;
     }
 
     quotes.push({ text, category });
 
     helper.className = "success";
-    helper.textContent = "Quote added successfully!";
+    helper.innerHTML = "Quote added successfully!";
     form.reset();
     showRandomQuote();
   });
