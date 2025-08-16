@@ -235,7 +235,7 @@ function importFromJsonFile(event) {
 // Fetch server quotes from a mock API and normalize to our schema
 async function fetchQuotesFromServer() {
   // Using DummyJSON (public mock). Map author→category; attach source=server
-  const url = "https://dummyjson.com/quotes?limit=10";
+  const url = "https://jsonplaceholder.typicode.com/posts";
   const res = await fetch(url);
   if (!res.ok) throw new Error("Server fetch failed");
   const data = await res.json();
