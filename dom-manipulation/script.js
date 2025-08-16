@@ -9,19 +9,19 @@ const quotes = [
 function showRandomQuote() {
   const target = document.getElementById("quoteDisplay");
   if (quotes.length === 0) {
-    target.innerHTML = "No quotes available."; // ✅ using innerHTML here
+    target.innerHTML = "No quotes available."; // ✅ using innerHTML
     return;
   }
   const i = Math.floor(Math.random() * quotes.length);
   const { text, category } = quotes[i];
-  target.innerHTML = `"${text}" — [${category}]`; // ✅ innerHTML again
+  target.innerHTML = `"${text}" — [${category}]`;
 }
 
-// ---- Create form with createElement & appendChild ------------------------
+// ---- Create form --------------------------------------------------------
 function createAddQuoteForm() {
   const mount = document.getElementById("addQuoteForm");
 
-  // Title (createElement + appendChild)
+  // Title
   const title = document.createElement("h2");
   title.textContent = "Add a New Quote";
   mount.appendChild(title);
@@ -70,7 +70,7 @@ function createAddQuoteForm() {
   submitBtn.textContent = "Add Quote";
   form.appendChild(submitBtn);
 
-  // Helper message (using innerHTML to satisfy requirement)
+  // Helper message (innerHTML here)
   const helper = document.createElement("p");
   helper.className = "muted";
   helper.innerHTML = "Fill both fields and press “Add Quote”.";
@@ -89,7 +89,11 @@ function createAddQuoteForm() {
       return;
     }
 
-    quotes.push({ text, category });
+    // ✅ create newQuote object
+    const newQuote = { text, category };
+
+    // ✅ push newQuote into quotes
+    quotes.push(newQuote);
 
     helper.className = "success";
     helper.innerHTML = "Quote added successfully!";
