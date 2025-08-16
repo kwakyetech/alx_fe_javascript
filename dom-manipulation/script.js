@@ -29,6 +29,7 @@ function loadQuotes() {
 function nowIso() {
   return new Date().toISOString();
 }
+// Deterministic ID from normalized text (stable across devices)
 function makeIdFromText(text) {
   return text.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "").slice(0, 64) || cryptoRandomId();
 }
@@ -176,6 +177,7 @@ function createAddQuoteForm() {
       return;
     }
     const q = normalizeQuote(text, category, "local");
+    // If an item with same id exists locally, update it (local edit)
     const i = quotes.findIndex(x => x.id === q.id);
     if (i >= 0) {
       quotes[i] = { ...q, updatedAt: nowIso() };
@@ -189,7 +191,7 @@ function createAddQuoteForm() {
     populateCategories();
     showRandomQuote();
 
-    // NEW: post to server as well
+    // Also POST to mock server
     postQuoteToServer(q);
   });
 }
@@ -214,6 +216,7 @@ function importFromJsonFile(event) {
       const imported = JSON.parse(e.target.result);
       if (!Array.isArray(imported)) return alert("Invalid JSON format.");
       const normalized = imported.map(q => normalizeQuote(q.text || q.quote || "", q.category || q.author || "Imported", "local"));
+      // Merge by id (local wins because it's an explicit import)
       normalized.forEach(n => {
         const i = quotes.findIndex(x => x.id === n.id);
         if (i >= 0) quotes[i] = { ...n, updatedAt: nowIso() };
@@ -232,6 +235,7 @@ function importFromJsonFile(event) {
 // ==============================
 // Server Sync (Simulation)
 // ==============================
+// GET mock server quotes and normalize to our schema
 async function fetchQuotesFromServer() {
   const url = "https://jsonplaceholder.typicode.com/posts";
   const res = await fetch(url);
@@ -245,7 +249,7 @@ async function fetchQuotesFromServer() {
   });
 }
 
-// NEW: Post data to server
+// POST a new quote to mock server
 async function postQuoteToServer(quote) {
   try {
     const res = await fetch("https://jsonplaceholder.typicode.com/posts/add", {
@@ -255,7 +259,7 @@ async function postQuoteToServer(quote) {
       },
       body: JSON.stringify({
         quote: quote.text,
-        author: quote.category
+        author: quote.category   // using category as the 'author' field for mock API
       })
     });
     if (!res.ok) throw new Error("Failed to post quote");
@@ -267,24 +271,29 @@ async function postQuoteToServer(quote) {
   }
 }
 
+// Merge server list into local, detect conflicts.
+// Conflict definition: same id exists AND (text OR category differs).
 function mergeWithConflicts(serverList) {
   const newConflicts = [];
   const localMap = new Map(quotes.map(q => [q.id, q]));
   serverList.forEach(sq => {
     const lq = localMap.get(sq.id);
     if (!lq) {
+      // New server item → add
       localMap.set(sq.id, sq);
     } else {
       const differs = lq.text !== sq.text || lq.category !== sq.category;
       if (differs) {
+        // server-wins default
         newConflicts.push({
           id: sq.id,
           local: lq,
           server: sq,
           choice: "server"
         });
-        localMap.set(sq.id, sq);
+        localMap.set(sq.id, sq); // default application
       } else {
+        // Same content: keep the most recent updatedAt (cosmetic)
         const newer = new Date(lq.updatedAt) > new Date(sq.updatedAt) ? lq : sq;
         localMap.set(sq.id, newer);
       }
@@ -294,27 +303,23 @@ function mergeWithConflicts(serverList) {
   return newConflicts;
 }
 
-async function syncNow() {
-  setSyncStatus("Syncing…");
-  try {
-    const serverList = await fetchQuotesFromServer();
-    const found = mergeWithConflicts(serverList);
-    saveQuotes();
-    populateCategories();
-    filterQuotes();
-    if (found.length > 0) {
-      conflicts = mergeConflictQueues(conflicts, found);
-      notify(`Sync complete with ${found.length} conflict(s). Server version applied by default.`, "warn");
-    }
-    setSyncStatus("Synced");
-  } catch (err) {
-    notify("Sync failed. Check your network and try again.", "warn");
-    setSyncStatus("Error");
-  } finally {
-    setTimeout(() => setSyncStatus("Idle"), 1500);
-  }
+// ==============================
+// Required: syncQuotes
+// Core sync logic without UI side-effects beyond local state updates.
+// Returns the number of detected conflicts.
+// ==============================
+async function syncQuotes() {
+  const serverList = await fetchQuotesFromServer();
+  const found = mergeWithConflicts(serverList);
+  saveQuotes();
+  populateCategories();
+  filterQuotes();
+  // Keep unresolved conflicts queue up-to-date
+  conflicts = mergeConflictQueues(conflicts, found);
+  return found.length;
 }
 
+// Helper to merge conflict queues (keep previously unresolved + new)
 function mergeConflictQueues(existing, incoming) {
   const map = new Map(existing.map(c => [c.id, c]));
   incoming.forEach(c => {
@@ -326,6 +331,30 @@ function mergeConflictQueues(existing, incoming) {
   });
   return Array.from(map.values());
 }
+
+// ==============================
+// UI wrapper for Sync button & auto-sync
+// ==============================
+async function syncNow() {
+  setSyncStatus("Syncing…");
+  try {
+    const conflictsCount = await syncQuotes();
+    if (conflictsCount > 0) {
+      notify(`Sync complete with ${conflictsCount} conflict(s). Server version applied by default.`, "warn");
+    } else {
+      notify("Sync complete. No conflicts detected.", "info");
+    }
+    setSyncStatus("Synced");
+  } catch (err) {
+    notify("Sync failed. Check your network and try again.", "warn");
+    setSyncStatus("Error");
+  } finally {
+    // Return to Idle after a moment
+    setTimeout(() => setSyncStatus("Idle"), 1500);
+  }
+}
+
+// Periodic sync (every 30s)
 function startAutoSync() {
   if (syncTimer) clearInterval(syncTimer);
   syncTimer = setInterval(() => {
@@ -447,6 +476,7 @@ document.getElementById("closeConflictsBtn").addEventListener("click", closeConf
 loadQuotes();
 createAddQuoteForm();
 populateCategories();
+// Restore last viewed
 const lastQuote = sessionStorage.getItem("lastQuote");
 if (lastQuote) {
   const { text, category } = JSON.parse(lastQuote);
