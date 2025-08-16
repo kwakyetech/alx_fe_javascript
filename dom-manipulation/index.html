@@ -10,8 +10,13 @@
 <body>
     <div id="app">
         <h1>Quote Manager</h1>
+
         <div id="quoteDisplay">Click “Show Random Quote” to begin.</div>
         <button id="randomBtn" type="button">Show Random Quote</button>
+        
+        <!-- Export & Import controls -->
+        <button id="exportBtn" type="button">Export Quotes (JSON)</button>
+        <input type="file" id="importFile" accept=".json" />
 
         <div id="addQuoteForm"></div>
     </div>
