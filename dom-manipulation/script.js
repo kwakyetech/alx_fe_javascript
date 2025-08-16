@@ -233,7 +233,7 @@ function importFromJsonFile(event) {
 // Server Sync (Simulation)
 // ==============================
 // Fetch server quotes from a mock API and normalize to our schema
-async function fetchServerQuotes() {
+async function fetchQuotesFromServer() {
   // Using DummyJSON (public mock). Map author→category; attach source=server
   const url = "https://dummyjson.com/quotes?limit=10";
   const res = await fetch(url);
@@ -283,7 +283,7 @@ function mergeWithConflicts(serverList) {
 async function syncNow() {
   setSyncStatus("Syncing…");
   try {
-    const serverList = await fetchServerQuotes();
+    const serverList = await fetchQuotesFromServer();
     const found = mergeWithConflicts(serverList);
     saveQuotes();
     populateCategories();
