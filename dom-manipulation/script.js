@@ -342,7 +342,7 @@ async function syncNow() {
     if (conflictsCount > 0) {
       notify(`Sync complete with ${conflictsCount} conflict(s). Server version applied by default.`, "warn");
     } else {
-      notify("Sync complete. No conflicts detected.", "info");
+      notify("Quotes synced with server!", "info");   // <--- NEW message
     }
     setSyncStatus("Synced");
   } catch (err) {
